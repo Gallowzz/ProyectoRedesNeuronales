@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-data = np.load("mnist_train.npz")
+data = np.load("mnist_test.npz")
 images = data["images"]
 labels = data["labels"]
 
