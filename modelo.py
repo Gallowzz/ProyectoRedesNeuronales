@@ -1,6 +1,5 @@
 import numpy as np
 import DnnLib
-import matplotlib.pyplot as plt
 import json
 
 # Cargar Data de Entrenamiento
