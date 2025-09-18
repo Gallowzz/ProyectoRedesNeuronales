@@ -7,14 +7,8 @@ inputs = data["images"].reshape(-1, 784) / 255
 targets = data["labels"]
 
 # Convertir a One-Hot
-y = np.zeros((60000, 10), dtype=np.float64)
+y = np.zeros((60000, 10), dtype=np.float32)
 y[np.arange(60000), targets] = 1.0
-
-# Generar Capas
-layers = [
-    DnnLib.DenseLayer(784, 128, DnnLib.ActivationType.RELU),
-    DnnLib.DenseLayer(128, 10, DnnLib.ActivationType.SOFTMAX),
-]
 
 # Inicializar Optimizadores
 optimizers = [
@@ -24,36 +18,53 @@ optimizers = [
     ("RMSprop", DnnLib.RMSprop(0.001))
 ]
 
-# Entrenamiento con distintos optimizadores
 for opt_name, optimizer in optimizers:
     print(f"\n--- Entrenando con {opt_name} ---")
 
     layers = [
         DnnLib.DenseLayer(784, 128, DnnLib.ActivationType.RELU),
-        DnnLib.DenseLayer(128, 10, DnnLib.ActivationType.SOFTMAX),
+        DnnLib.DenseLayer(128, 10, DnnLib.ActivationType.SOFTMAX)
     ]
     optimizer.reset()
 
-    for epoch in range(20):
-        # Forward Pass
-        activation = inputs
-        for layer in layers:
-            activation = layer.forward(activation)
-        output = activation
+    n_samples = inputs.shape[0]
 
-        # Perdida
-        loss = DnnLib.cross_entropy(output, y)
+    for epoch in range(5):
+        # Mezclar Data
+        indexes = np.random.permutation(n_samples)
+        X_shuffled = inputs[indexes]
+        y_shuffled = y[indexes]
+        
+        epoch_loss = 0.0
+        n_batches = 0
+        batch_size = 64
+        
+        # Generar Sub-Batches
+        for i in range(0, n_samples, batch_size):
+            X_batch = X_shuffled[i:i+batch_size]
+            y_batch = y_shuffled[i:i+batch_size]
 
-        # Backward Pass
-        grad = DnnLib.cross_entropy_gradient(output, y)
-        for layer in reversed(layers):
-            grad = layer.backward(grad)
+            # Forward Pass
+            activation = X_batch
+            for layer in layers:
+                activation = layer.forward(activation)
+            output = activation
+
+            # Perdida
+            loss = DnnLib.cross_entropy(output, y_batch)
+            
+            # Backward pass
+            grad = DnnLib.cross_entropy_gradient(output, y_batch)
+            for layer in reversed(layers):
+                grad = layer.backward(grad)
             optimizer.update(layer)
 
-        if epoch % 5 == 0:
-            predicted_classes = np.argmax(output, axis=1)
-            accuracy = np.mean(predicted_classes == y)
-            print(f"Epoch {epoch}, Loss: {loss:.4f}, Accuracy: {accuracy:.4f}")
+            epoch_loss += loss
+            n_batches += 1
 
-    # Final
-    print(f" Perdida final con {opt_name}: {loss:.6f}")
+        # Precision
+        avg_loss = epoch_loss / n_batches
+        predicted_classes = np.argmax(output, axis=1)
+        target_classes = np.argmax(y_batch, axis=1)
+        accuracy = np.mean(predicted_classes == target_classes)
+        print(f"Epoca {epoch+1}, Perdida Promedio: {avg_loss:.4f}, Precision: {accuracy:.4f}")            
