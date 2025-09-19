@@ -4,7 +4,7 @@ import json
 
 # Cargar Data de Entrenamiento
 data = np.load("mnist_train.npz")
-input = data["images"].reshape(-1, 784) / 255
+inputs = data["images"].reshape(-1, 784) / 255
 targets = data["labels"]
 
 # Abrir Archivo JSON
@@ -24,7 +24,7 @@ layer1.weights = np.array(datos["layers"][1]["W"]).T
 layer1.bias = np.array(datos["layers"][1]["b"]).T
 
 # Forward Pass
-output0 = layer0.forward(input)
+output0 = layer0.forward(inputs)
 output1 = layer1.forward(output0)
 
 # Precision
