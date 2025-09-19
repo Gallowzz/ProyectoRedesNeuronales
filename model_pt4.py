@@ -20,14 +20,14 @@ def save_params(layers):
             {"units": 10, "activation": "SOFTMAX", "W":layers[1].weights.T.tolist(), "b":layers[1].bias.T.tolist()}
         ]
     }
-    name = "new_nmist_model.json"
+    name = "new_mnist_model.json"
     with open(name, "w") as ah:
         json.dump(params, ah, indent=4)
 
 # Entrenamiento
 def train():
     # Cargar Data de Entrenamiento
-    data = np.load("mnist_train.npz")
+    data = np.load("./datafiles/mnist_train.npz")
     inputs = data["images"].reshape(-1, 784) / 255
     targets = data["labels"]
     
@@ -108,12 +108,12 @@ def train():
         
 # Prueba
 def test():
-    data = np.load("mnist_test.npz")
+    data = np.load("./datafiles/mnist_test.npz")
     inputs = data["images"].reshape(-1, 784) / 255
     targets = data["labels"]
     
     # Abrir Archivo JSON
-    with open("new_nmist_model.json","r") as ah:
+    with open("new_mnist_model.json","r") as ah:
         datos = json.load(ah)
     
     # Inicializar Capas
