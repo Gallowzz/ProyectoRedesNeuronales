@@ -1,7 +1,11 @@
+# Librerias
 import numpy as np
 import DnnLib
 import json
 import argparse
+
+# Funciones de Ayuda
+from save_to_json import save_params
 
 # Crear Argumentos para el parser
 parser = argparse.ArgumentParser(description="Train MNIST MLP Model.")
@@ -11,18 +15,6 @@ parser.add_argument('--batch-size', type=int, default=64, help="Batch Size")
 parser.add_argument('--learning_rate', type=float, default=0.001, help="Learning Rate for Optimizer")
 parser.add_argument('--optimizer', type=str, default="Adam", help="Optimizer to train with(SGD, SGD+Momentum, Adam, or RMSprop)")
 args = parser.parse_args()
-
-# Guardar Parametros en JSON
-def save_params(layers):
-    params = {
-        "layers":[
-            {"units": 128, "activation": "RELU", "W":layers[0].weights.T.tolist(), "b":layers[0].bias.T.tolist()},
-            {"units": 10, "activation": "SOFTMAX", "W":layers[1].weights.T.tolist(), "b":layers[1].bias.T.tolist()}
-        ]
-    }
-    name = "new_mnist_model.json"
-    with open(name, "w") as ah:
-        json.dump(params, ah, indent=4)
 
 # Entrenamiento
 def train():
@@ -103,7 +95,7 @@ def train():
         print(f"Epoca {epoch+1}, Perdida Promedio: {avg_loss:.4f}, Precision: {accuracy:.4f}")
 
     # Guardar Parametros
-    save_params(layers)
+    save_params(layers, "new_mnist_model.json")
     print("Modelo Guardado Exitosamente")
         
 # Prueba
