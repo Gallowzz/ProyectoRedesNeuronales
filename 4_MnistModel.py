@@ -63,6 +63,9 @@ def train():
         epoch_loss = 0.0
         n_batches = 0
         batch_size = args.batch_size
+        # Para predicciones
+        correct = 0
+        total = 0
             
         # Generar Sub-Batches
         for i in range(0, n_samples, batch_size):
@@ -83,16 +86,21 @@ def train():
             for layer in reversed(layers):
                 grad = layer.backward(grad)
                 optimizer.update(layer)
-    
+
+            # Prediccion
+            predicted_classes = np.argmax(output, axis=1)
+            target_classes = np.argmax(y_batch, axis=1)
+            
+            # Metricas
             epoch_loss += loss
             n_batches += 1
+            correct += np.sum(predicted_classes == target_classes)
+            total += len(y_batch)
     
         # Precision
         avg_loss = epoch_loss / n_batches
-        predicted_classes = np.argmax(output, axis=1)
-        target_classes = np.argmax(y_batch, axis=1)
-        accuracy = np.mean(predicted_classes == target_classes)
-        print(f"Epoca {epoch+1}, Perdida Promedio: {avg_loss:.4f}, Precision: {accuracy:.4f}")
+        accuracy = correct/total
+        print(f"Epoca {epoch+1}, Perdida Data: {avg_loss:.4f}, Precision: {accuracy:.4f}")
 
     # Guardar Parametros
     save_params(layers, "new_mnist_model.json")
