@@ -6,6 +6,8 @@ import argparse
 
 # Funciones de Ayuda
 from save_to_json import save_params
+from initialize_optimizers import init_opts
+from test_process import test_model
 
 # Crear Argumentos para el parser
 parser = argparse.ArgumentParser(description="Train Fashion MNIST MLP Model.")
@@ -30,31 +32,21 @@ def train():
     # Inicializar Optimizador
     learning_rate = args.learning_rate
     opt_name = args.optimizer
-    if opt_name == "SGD":
-        optimizer = DnnLib.SGD(learning_rate)
-    elif opt_name == "SGD+Momentum":
-        optimizer = DnnLib.SGD(learning_rate, 0.9)
-    elif opt_name == "Adam":
-        optimizer = DnnLib.Adam(learning_rate)
-    elif opt_name == "RMSProp":
-        optimizer = DnnLib.RMSProp(learning_rate)
-    else:
-        print("No se reconoce el Optimizador, utilizadon ADAM")
-        opt_name = "Adam"
-        optimizer = DnnLib.Adam(learning_rate)
+    optimizer = init_opts(opt_name, learning_rate)
 
-    print(f"\n--- Entrenando con {opt_name} ---")
+    print(f"\n--- Entrenando con {optimizer[0]} ---")
 
     # Inicializar Red
     layers = [
         DnnLib.DenseLayer(784, 128, DnnLib.ActivationType.RELU),
+        DnnLib.Dropout(0.2),
         DnnLib.DenseLayer(128, 10, DnnLib.ActivationType.SOFTMAX)
     ]
-    optimizer.reset()
+    optimizer[1].reset()
 
     # Agregar Regularizacion
     layers[0].set_regularizer(DnnLib.RegularizerType.L2, 0.001)
-    layers[1].set_regularizer(DnnLib.RegularizerType.L2, 0.001)
+    layers[2].set_regularizer(DnnLib.RegularizerType.L2, 0.001)
     
     n_samples = inputs.shape[0]
     
@@ -81,6 +73,8 @@ def train():
             # Forward Pass
             activation = X_batch
             for layer in layers:
+                if hasattr(layer, 'training'):
+                    layer.training = true
                 activation = layer.forward(activation)
             output = activation
     
@@ -95,7 +89,8 @@ def train():
             grad = DnnLib.cross_entropy_gradient(output, y_batch)
             for layer in reversed(layers):
                 grad = layer.backward(grad)
-                optimizer.update(layer)
+                if not hasattr(layer, 'training'):
+                    optimizer[1].update(layer)
 
             # Prediccion
             predicted_classes = np.argmax(output, axis=1)
@@ -123,38 +118,19 @@ def train():
 # Prueba
 def test():
     data = np.load("./datafiles/fashion_mnist_test.npz")
-    inputs = data["images"].reshape(-1, 784) / 255
-    targets = data["labels"]
     
     # Abrir Archivo JSON
     with open("new_fashion_mnist_model.json","r") as ah:
-        datos = json.load(ah)
+        params = json.load(ah)
     
-    # Inicializar Capas
-    layer0 = DnnLib.DenseLayer(784, 128, DnnLib.ActivationType.RELU)
-    layer1 = DnnLib.DenseLayer(128, 10, DnnLib.ActivationType.SOFTMAX)
+    accuracy = test_model(data, params)
     
-    # Datos Capa 0
-    layer0.weights = np.array(datos["layers"][0]["W"]).T
-    layer0.bias = np.array(datos["layers"][0]["b"]).T
-    
-    # Datos Capa 1
-    layer1.weights = np.array(datos["layers"][1]["W"]).T
-    layer1.bias = np.array(datos["layers"][1]["b"]).T
-    
-    # Forward Pass
-    output0 = layer0.forward(inputs)
-    output1 = layer1.forward(output0)
-    
-    # Precision
-    predictions = np.argmax(output1, axis=1)
-    accuracy = np.mean(predictions == targets)
     print("Precision: ",accuracy)
 
 # Detectar Modo
-if args.mode == "Test":
+if args.mode.lower() == "test":
     test()
-elif args.mode == "Train": 
+elif args.mode.lower() == "train": 
     train()
 else:
-    print("No hay Modo")
+    "No hay Modo"

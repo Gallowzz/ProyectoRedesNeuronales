@@ -6,6 +6,8 @@ import argparse
 
 # Funciones de Ayuda
 from save_to_json import save_params
+from initialize_optimizers import init_opts
+from test_process import test_model
 
 # Crear Argumentos para el parser
 parser = argparse.ArgumentParser(description="Train MNIST MLP Model.")
@@ -15,6 +17,12 @@ parser.add_argument('--batch-size', type=int, default=64, help="Batch Size")
 parser.add_argument('--learning_rate', type=float, default=0.001, help="Learning Rate for Optimizer")
 parser.add_argument('--optimizer', type=str, default="Adam", help="Optimizer to train with(SGD, SGD+Momentum, Adam, or RMSprop)")
 args = parser.parse_args()
+
+# Estructura de la Red para el modelo
+structure = [
+    DnnLib.DenseLayer(784, 128, DnnLib.ActivationType.RELU),
+    DnnLib.DenseLayer(128, 10, DnnLib.ActivationType.SOFTMAX)
+]
 
 # Entrenamiento
 def train():
@@ -30,28 +38,13 @@ def train():
     # Inicializar Optimizador
     learning_rate = args.learning_rate
     opt_name = args.optimizer
-    if opt_name == "SGD":
-        optimizer = DnnLib.SGD(learning_rate)
-    elif opt_name == "SGD+Momentum":
-        optimizer = DnnLib.SGD(learning_rate, 0.9)
-    elif opt_name == "Adam":
-        optimizer = DnnLib.Adam(learning_rate)
-    elif opt_name == "RMSProp":
-        optimizer = DnnLib.RMSProp(learning_rate)
-    else:
-        print("No se reconoce el Optimizador, utilizadon ADAM")
-        opt_name = "Adam"
-        optimizer = DnnLib.Adam(learning_rate)
+    optimizer = init_opts(opt_name, learning_rate)
 
-    print(f"\n--- Entrenando con {opt_name} ---")
+    print(f"\n--- Entrenando con {optimizer[0]} ---")
 
     # Inicializar Red
-    layers = [
-        DnnLib.DenseLayer(784, 128, DnnLib.ActivationType.RELU),
-        DnnLib.DenseLayer(128, 10, DnnLib.ActivationType.SOFTMAX)
-    ]
-    optimizer.reset()
-    
+    layers = structure
+    optimizer[1].reset()
     n_samples = inputs.shape[0]
     
     for epoch in range(args.epochs):
@@ -85,7 +78,7 @@ def train():
             grad = DnnLib.cross_entropy_gradient(output, y_batch)
             for layer in reversed(layers):
                 grad = layer.backward(grad)
-                optimizer.update(layer)
+                optimizer[1].update(layer)
 
             # Prediccion
             predicted_classes = np.argmax(output, axis=1)
@@ -108,39 +101,21 @@ def train():
         
 # Prueba
 def test():
+    # Cargar Data
     data = np.load("./datafiles/mnist_test.npz")
-    inputs = data["images"].reshape(-1, 784) / 255
-    targets = data["labels"]
     
     # Abrir Archivo JSON
     with open("new_mnist_model.json","r") as ah:
-        datos = json.load(ah)
+        params = json.load(ah)
     
-    # Inicializar Capas
-    layer0 = DnnLib.DenseLayer(784, 128, DnnLib.ActivationType.RELU)
-    layer1 = DnnLib.DenseLayer(128, 10, DnnLib.ActivationType.SOFTMAX)
+    accuracy = test_model(data, params)
     
-    # Datos Capa 0
-    layer0.weights = np.array(datos["layers"][0]["W"]).T
-    layer0.bias = np.array(datos["layers"][0]["b"]).T
-    
-    # Datos Capa 1
-    layer1.weights = np.array(datos["layers"][1]["W"]).T
-    layer1.bias = np.array(datos["layers"][1]["b"]).T
-    
-    # Forward Pass
-    output0 = layer0.forward(inputs)
-    output1 = layer1.forward(output0)
-    
-    # Precision
-    predictions = np.argmax(output1, axis=1)
-    accuracy = np.mean(predictions == targets)
-    print("Precision: ",accuracy)
+    print("Precision: ", accuracy)
 
 # Detectar Modo
-if args.mode == "Test":
+if args.mode.lower() == "test":
     test()
-elif args.mode == "Train": 
+elif args.mode.lower() == "train": 
     train()
 else:
     "No hay Modo"
