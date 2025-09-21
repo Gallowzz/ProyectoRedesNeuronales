@@ -8,7 +8,7 @@ import argparse
 from save_to_json import save_params
 
 # Crear Argumentos para el parser
-parser = argparse.ArgumentParser(description="Train Fashion MNIST MLP Model.")
+parser = argparse.ArgumentParser(description="Train MNIST MLP Model.")
 parser.add_argument('--mode', type=str, default="Test", help="Test or Train the Model")
 parser.add_argument('--epochs', type=int, default=10, help="Epoch Amount")
 parser.add_argument('--batch-size', type=int, default=64, help="Batch Size")
@@ -19,7 +19,7 @@ args = parser.parse_args()
 # Entrenamiento
 def train():
     # Cargar Data de Entrenamiento
-    data = np.load("./datafiles/fashion_mnist_train.npz")
+    data = np.load("./datafiles/mnist_train.npz")
     inputs = data["images"].reshape(-1, 784) / 255
     targets = data["labels"]
     
@@ -82,7 +82,7 @@ def train():
             grad = DnnLib.cross_entropy_gradient(output, y_batch)
             for layer in reversed(layers):
                 grad = layer.backward(grad)
-            optimizer.update(layer)
+                optimizer.update(layer)
     
             epoch_loss += loss
             n_batches += 1
@@ -95,17 +95,17 @@ def train():
         print(f"Epoca {epoch+1}, Perdida Promedio: {avg_loss:.4f}, Precision: {accuracy:.4f}")
 
     # Guardar Parametros
-    save_params(layers, "new_fashion_mnist_model.json")
+    save_params(layers, "new_mnist_model.json")
     print("Modelo Guardado Exitosamente")
         
 # Prueba
 def test():
-    data = np.load("./datafiles/fashion_mnist_test.npz")
+    data = np.load("./datafiles/mnist_test.npz")
     inputs = data["images"].reshape(-1, 784) / 255
     targets = data["labels"]
     
     # Abrir Archivo JSON
-    with open("new_fashion_mnist_model.json","r") as ah:
+    with open("new_mnist_model.json","r") as ah:
         datos = json.load(ah)
     
     # Inicializar Capas
@@ -135,4 +135,4 @@ if args.mode == "Test":
 elif args.mode == "Train": 
     train()
 else:
-    print("No hay Modo")
+    "No hay Modo"

@@ -82,7 +82,7 @@ def train():
             grad = DnnLib.cross_entropy_gradient(output, y_batch)
             for layer in reversed(layers):
                 grad = layer.backward(grad)
-            optimizer.update(layer)
+                optimizer.update(layer)
     
             epoch_loss += loss
             n_batches += 1
