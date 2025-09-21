@@ -64,7 +64,9 @@ def train():
         X_shuffled = inputs[indexes]
         y_shuffled = y[indexes]
             
-        epoch_loss = 0.0
+        epoch_total_loss = 0.0
+        epoch_data_loss = 0.0
+        epoch_reg_loss = 0.0
         n_batches = 0
         batch_size = args.batch_size
         # Para predicciones
@@ -100,15 +102,19 @@ def train():
             target_classes = np.argmax(y_batch, axis=1)
             
             # Metricas
-            epoch_loss += loss
+            epoch_data_loss += data_loss
+            epoch_reg_loss += reg_loss
+            epoch_total_loss += loss
             n_batches += 1
             correct += np.sum(predicted_classes == target_classes)
             total += len(y_batch)
     
         # Precision
-        avg_loss = epoch_loss / n_batches
+        avg_data_loss = epoch_data_loss / n_batches
+        avg_reg_loss = epoch_reg_loss / n_batches
+        avg_loss = epoch_total_loss / n_batches
         accuracy = correct/total
-        print(f"Epoca {epoch+1}, Perdida Data: {avg_loss:.4f}, Precision: {accuracy:.4f}")
+        print(f"Epoca {epoch+1}, Perdida Data: {avg_data_loss:.4f}, Perdida Regularizacion: {avg_reg_loss:.4f}, Perdida Total: {avg_loss:.4f}, Precision: {accuracy:.4f}")
 
     # Guardar Parametros
     save_params(layers, "new_fashion_mnist_model.json")
