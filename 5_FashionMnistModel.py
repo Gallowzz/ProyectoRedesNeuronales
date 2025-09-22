@@ -96,7 +96,7 @@ def train():
             epoch_reg_loss = 0.0
             for layer in layers:
                 if not hasattr(layer, 'training'):
-                    epoch_reg_loss += layer.compute_regularization_loss()
+                    epoch_reg_loss += layer.compute_regularization_loss() / (n_batches + 1)
             loss = epoch_data_loss + epoch_reg_loss
             
             # Backward pass
@@ -131,9 +131,10 @@ def train():
         accuracy = correct/total
 
         # Resultados por Epoca
-        print(f"--- Epoca {epoch+1} ---")
-        print(f"Perdida Data: {avg_data_loss:.4f}, Perdida Regularizacion: {avg_reg_loss:.4f}, Perdida Val: {avg_val_loss:.4f}, Perdida Total: {avg_loss:.4f}")
-        print(f"Precision: {accuracy:.4f}")
+        print(f"Epoca {epoch+1}:")
+        print(f"- Perdida Data: {avg_data_loss:.4f}, Perdida Regularizacion: {avg_reg_loss:.4f}, ")
+        print(f"- Perdida Total: {avg_loss:.4f}, Perdida Valoracion: {avg_val_loss:.4f}")
+        print(f"- Precision: {accuracy:.4f}")
 
     # Guardar Parametros
     dense_layers = []
