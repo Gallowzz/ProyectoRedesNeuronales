@@ -125,7 +125,7 @@ def test():
     
     accuracy = test_model(data, params)
     
-    print("Precision: ",accuracy)
+    print("Precision: ",accuracy, structure)
 
 # Detectar Modo
 if args.mode.lower() == "test":

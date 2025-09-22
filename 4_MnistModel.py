@@ -108,7 +108,7 @@ def test():
     with open("new_mnist_model.json","r") as ah:
         params = json.load(ah)
     
-    accuracy = test_model(data, params)
+    accuracy = test_model(data, params, structure)
     
     print("Precision: ", accuracy)
 

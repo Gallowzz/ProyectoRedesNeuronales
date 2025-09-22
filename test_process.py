@@ -4,16 +4,11 @@ import DnnLib
 # Proceso general para probar el modelo
 # UNA FUNCION DE AYUDA, NO EJECUTAR SOLO
 
-def test_model(data, params):
+def test_model(data, params, layers):
     # Inicializar Data
     inputs = data["images"].reshape(-1, 784) / 255
     targets = data["labels"]
     
-   # Inicializar Capas
-    layers = [
-        DnnLib.DenseLayer(784, 128, DnnLib.ActivationType.RELU),
-        DnnLib.DenseLayer(128, 10, DnnLib.ActivationType.SOFTMAX)
-    ]
     # Datos por capa
     for idx in range(len(layers)):
         layers[idx].weights = np.array(params["layers"][idx]["W"]).T
