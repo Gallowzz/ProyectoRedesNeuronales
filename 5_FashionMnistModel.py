@@ -18,6 +18,26 @@ parser.add_argument('--learning_rate', type=float, default=0.001, help="Learning
 parser.add_argument('--optimizer', type=str, default="Adam", help="Optimizer to train with(SGD, SGD+Momentum, Adam, or RMSprop)")
 args = parser.parse_args()
 
+# Estructura de la Red
+structure = [
+    DnnLib.DenseLayer(784, 352, DnnLib.ActivationType.RELU),
+    DnnLib.Dropout(0.2),
+    DnnLib.DenseLayer(352, 156, DnnLib.ActivationType.RELU),
+    DnnLib.Dropout(0.5),
+    DnnLib.DenseLayer(156, 72, DnnLib.ActivationType.RELU),
+    DnnLib.Dropout(0.1),
+    DnnLib.DenseLayer(72, 10, DnnLib.ActivationType.SOFTMAX)
+]
+
+# Funcion aparte para el forward para simplificar la implementacion del dropout
+def forward_pass (layers, X, training):
+    activation = X
+    for layer in layers:
+        if hasattr(layer, 'training'):
+            layer.training = training
+        activation = layer.forward(activation)
+    return activation
+
 # Entrenamiento
 def train():
     # Cargar Data de Entrenamiento
@@ -37,17 +57,14 @@ def train():
     print(f"\n--- Entrenando con {optimizer[0]} ---")
 
     # Inicializar Red
-    layers = [
-        DnnLib.DenseLayer(784, 128, DnnLib.ActivationType.RELU),
-        DnnLib.Dropout(0.2),
-        DnnLib.DenseLayer(128, 10, DnnLib.ActivationType.SOFTMAX)
-    ]
+    layers = structure
     optimizer[1].reset()
 
     # Agregar Regularizacion
-    layers[0].set_regularizer(DnnLib.RegularizerType.L2, 0.001)
-    layers[2].set_regularizer(DnnLib.RegularizerType.L2, 0.001)
-    
+    for layer in layers:
+        if not hasattr(layer, 'training'):
+            layer.set_regularizer(DnnLib.RegularizerType.L2, 0.001)
+
     n_samples = inputs.shape[0]
     
     for epoch in range(args.epochs):
@@ -56,9 +73,10 @@ def train():
         X_shuffled = inputs[indexes]
         y_shuffled = y[indexes]
             
-        epoch_total_loss = 0.0
-        epoch_data_loss = 0.0
-        epoch_reg_loss = 0.0
+        total_loss = 0.0
+        data_loss = 0.0
+        reg_loss = 0.0
+        val_loss = 0.0
         n_batches = 0
         batch_size = args.batch_size
         # Para predicciones
@@ -71,19 +89,15 @@ def train():
             y_batch = y_shuffled[i:i+batch_size]
     
             # Forward Pass
-            activation = X_batch
-            for layer in layers:
-                if hasattr(layer, 'training'):
-                    layer.training = true
-                activation = layer.forward(activation)
-            output = activation
-    
+            output = forward_pass(layers, X_batch, True)
+            
             # Perdida
-            data_loss = DnnLib.cross_entropy(output, y_batch)
-            reg_loss = 0.0
+            epoch_data_loss = DnnLib.cross_entropy(output, y_batch)
+            epoch_reg_loss = 0.0
             for layer in layers:
-                reg_loss += layer.compute_regularization_loss()
-            loss = data_loss + reg_loss
+                if not hasattr(layer, 'training'):
+                    epoch_reg_loss += layer.compute_regularization_loss()
+            loss = epoch_data_loss + epoch_reg_loss
             
             # Backward pass
             grad = DnnLib.cross_entropy_gradient(output, y_batch)
@@ -95,24 +109,38 @@ def train():
             # Prediccion
             predicted_classes = np.argmax(output, axis=1)
             target_classes = np.argmax(y_batch, axis=1)
+
+            # Validacion con Dropout Desactivado
+            val_output = forward_pass(layers, X_batch, False)
+            epoch_val_loss = DnnLib.cross_entropy(val_output, y_batch)
             
             # Metricas
-            epoch_data_loss += data_loss
-            epoch_reg_loss += reg_loss
-            epoch_total_loss += loss
+            data_loss += epoch_data_loss
+            reg_loss += epoch_reg_loss
+            total_loss += loss
+            val_loss += epoch_val_loss
             n_batches += 1
             correct += np.sum(predicted_classes == target_classes)
             total += len(y_batch)
     
         # Precision
-        avg_data_loss = epoch_data_loss / n_batches
-        avg_reg_loss = epoch_reg_loss / n_batches
-        avg_loss = epoch_total_loss / n_batches
+        avg_data_loss = data_loss / n_batches
+        avg_reg_loss = reg_loss / n_batches
+        avg_loss = total_loss / n_batches
+        avg_val_loss = val_loss / n_batches
         accuracy = correct/total
-        print(f"Epoca {epoch+1}, Perdida Data: {avg_data_loss:.4f}, Perdida Regularizacion: {avg_reg_loss:.4f}, Perdida Total: {avg_loss:.4f}, Precision: {accuracy:.4f}")
+
+        # Resultados por Epoca
+        print(f"--- Epoca {epoch+1} ---")
+        print(f"Perdida Data: {avg_data_loss:.4f}, Perdida Regularizacion: {avg_reg_loss:.4f}, Perdida Val: {avg_val_loss:.4f}, Perdida Total: {avg_loss:.4f}")
+        print(f"Precision: {accuracy:.4f}")
 
     # Guardar Parametros
-    save_params(layers, "new_fashion_mnist_model.json")
+    dense_layers = []
+    for layer in layers:
+        if not hasattr(layer, 'training'):
+            dense_layers.append(layer)
+    save_params(dense_layers, "new_fashion_mnist_model.json")
     print("Modelo Guardado Exitosamente")
         
 # Prueba
@@ -122,10 +150,15 @@ def test():
     # Abrir Archivo JSON
     with open("new_fashion_mnist_model.json","r") as ah:
         params = json.load(ah)
+
+    layers = []
+    for layer in structure:
+        if not hasattr(layer, 'training'):
+            layers.append(layer)
     
-    accuracy = test_model(data, params)
+    accuracy = test_model(data, params, layers)
     
-    print("Precision: ",accuracy, structure)
+    print("Precision: ",accuracy)
 
 # Detectar Modo
 if args.mode.lower() == "test":
